@@ -1,8 +1,8 @@
 # Customer Value Dashboard
 
 A conventional BI dashboard where participants understand a metric and inspect
-the data behind it using only ordinary affordances: metric details, calculation
-expressions, view underlying data, CSV export.
+the data behind it using only ordinary affordances: KPI cards, charts, a period
+filter, and View Underlying Data.
 
 It runs in **two study conditions**, differing in exactly one thing: whether a
 card's ⋯ menu offers **Open in CLUE**, a link into the treatment app in
@@ -12,23 +12,36 @@ over a URL.
 
 ## Quick start
 
+From a fresh clone, first create the repo's virtualenv (it is gitignored):
+
+```bash
+python3 -m venv .venv                                  # at the repo root
+.venv/bin/pip install -r baseline_dashboard/requirements.txt
+```
+
+Then build the data source and run the app:
+
 ```bash
 cd baseline_dashboard
-python -m datasource.build      # once, ~80s — builds the modeled data source
-streamlit run app.py
+../.venv/bin/python -m datasource.build          # once — downloads + builds
+../.venv/bin/python -m streamlit run app.py
 ```
+
+The first build downloads the raw jaffle-shop CSVs (~546 MB, about a minute
+on a fast connection) and then builds the modeled Parquet (~15 s). Later builds
+skip the download. See [Data](#data) for where the files come from.
 
 Or bring up both apps together:
 
 ```bash
-./run_study.sh                  # baseline on :8501, CLUE on :8502
+./run_study.sh                  # from the repo root; baseline on :8501, CLUE on :8502
 ```
 
-Dependencies are already in the repo's `.venv` (streamlit, pandas, numpy,
-altair, pyarrow). Nothing new was added.
+Use `../.venv/bin/python -m streamlit`, not bare `streamlit` — the virtualenv
+is not on `PATH`.
 
 ```bash
-python -m unittest discover tests      # 143 tests
+../.venv/bin/python -m unittest discover tests      # 147 tests, no network
 ```
 
 ## Running a study session
@@ -95,7 +108,7 @@ Every interaction appends a JSON line to `logs/events-YYYY-MM-DD.jsonl`
 (gitignored):
 
 ```json
-{"timestamp": "...", "action": "open_details", "participant": "P01",
+{"timestamp": "...", "action": "open_underlying", "participant": "P01",
  "block": 1, "condition": "clue", "token": "d3d47a",
  "metric": "customer_value", "source": "card_menu"}
 ```
@@ -183,8 +196,30 @@ because the period can span the whole dataset.
 
 ## Data
 
-`data/` holds the raw jaffle-shop CSVs (~546 MB, gitignored) and the modeled
-Parquet the app actually reads.
+`data/` holds the raw jaffle-shop CSVs (~546 MB) and the modeled Parquet the
+app actually reads. Both are gitignored, so a fresh clone has neither.
+
+The raw files are dbt Labs' public **six-year** jaffle-shop dataset — the
+`long_term_dataset` from the dbt quickstarts, not the one-year seeds in the
+`jaffle-shop` repo:
+
+```
+https://dbt-tutorial-public.s3.amazonaws.com/long_term_dataset/<file>.csv
+```
+
+`python -m datasource.build` fetches any that are missing. To fetch them on
+their own (say, before going offline):
+
+```bash
+../.venv/bin/python -m datasource.download           # only what is missing
+../.venv/bin/python -m datasource.download --force   # re-fetch everything
+```
+
+Each file's byte size is pinned in `datasource/download.py`. A file already on
+disk at that size is skipped without touching the network; a download that
+comes back a different size fails, because the time shift and synthesis
+constants were tuned on this exact export. Downloads go to a `.part` file first,
+so an interrupted one is never mistaken for complete.
 
 | Raw file | Rows |
 |---|---:|
@@ -242,7 +277,8 @@ filters are interactive.
 
 So: **precompute the shape, compute the ratios on demand.**
 
-- **Build once** → six Parquet files in `data/modeled/`.
+- **Build once** → five Parquet files in `data/modeled/`, plus
+  `SYNTHESIZED.md`.
 - **Two small tables** serve every KPI and both charts: `customers.parquet`
   (7,137 rows) and `customer_window_facts.parquet` (2,527 rows, one per user who
   ordered inside their own 90 days). Aggregating ~10 K rows is milliseconds, for
@@ -272,6 +308,7 @@ study/
   make_sessions.py           counterbalanced link generator
   events.py                  interaction logging
 datasource/
+  download.py                fetch the raw jaffle-shop CSVs
   age.py                     time shift + customer_age_month/_days
   synthesize.py              signup lag, non-purchasing users
   build.py                   raw CSV → modeled parquet
@@ -283,8 +320,8 @@ metrics/
   checks.py                  the five consistency assertions
 components/
   styles.py header.py filters.py kpi_cards.py charts.py
-  underlying_data.py         Summary / Underlying rows + CSV export
-tests/                       143 unittest tests
+  underlying_data.py         Summary / Underlying rows (no export)
+tests/                       147 unittest tests
 ```
 
 ## Where to edit what
@@ -297,6 +334,7 @@ tests/                       143 unittest tests
 - **Drilldown columns** — `components/underlying_data.py`
 - **Anything about the raw → modeled transform** — `datasource/build.py`
   (re-run the build afterwards)
+- **Where the raw data comes from** — `datasource/download.py`
 - **Which cards link into CLUE** — `MetricDef.clue_metric` in
   `metrics/registry.py`; only `customer_value` is mapped today
 - **What gets logged** — `study/events.py` and the `log_event` call sites

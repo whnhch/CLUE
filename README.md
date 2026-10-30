@@ -31,9 +31,12 @@ It runs in the foreground; Ctrl-C stops both. `CLUE_URL` is set for you so the
 dashboard's "Open in CLUE" links resolve. Override `BASELINE_PORT` / `CLUE_PORT`
 if those ports are taken.
 
-First time only, build the dashboard's data source (~80s):
+First time only, create the virtualenv and build the dashboard's data source.
+The build downloads the raw jaffle-shop CSVs (~546 MB) if they are missing,
+then builds the modeled Parquet:
 
 ```bash
+python3 -m venv .venv && .venv/bin/pip install -r baseline_dashboard/requirements.txt
 cd baseline_dashboard && ../.venv/bin/python -m datasource.build
 ```
 
@@ -90,7 +93,7 @@ not on `PATH`.
 cd baseline_dashboard && ../.venv/bin/python -m unittest discover tests
 ```
 
-143 tests. They redirect their own logging to a temp directory, so running them
+147 tests. They redirect their own logging to a temp directory, so running them
 never contaminates study data.
 
 ## Notes

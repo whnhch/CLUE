@@ -7,6 +7,7 @@ Run once from the baseline_dashboard directory:
 
     python -m datasource.build
 
+Raw CSVs missing from data/ are downloaded first (see `datasource/download.py`).
 This is the only code that ever touches the raw CSVs (~546 MB). Everything the
 app does at runtime reads the Parquet written here. The modeled layer is also
 exactly the depth `View Underlying Data` exposes -- rows and fields of the
@@ -31,6 +32,7 @@ from datasource.age import (
     customer_age_days,
     customer_age_month,
 )
+from datasource.download import ensure_raw_data
 from datasource.synthesize import (
     CONVERSION_BASE,
     CONVERSION_SEASONAL_AMPLITUDE,
@@ -395,6 +397,7 @@ is computed from them as `revenue - cost`.
 # ---------------------------------------------------------------------------
 
 def main() -> None:
+    ensure_raw_data()
     MODELED_DIR.mkdir(parents=True, exist_ok=True)
 
     _log("Building product economics...")
