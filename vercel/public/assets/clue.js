@@ -212,8 +212,7 @@ function drawProvenance() {
     highlighted: state.selectedNode,
     values: nodeValues(b),
     onSelect: (id) => {
-      if (id === state.selectedNode) return;
-      state.selectedNode = id;
+      state.selectedNode = id === state.selectedNode ? null : id;
       drawProvenance();
     },
   });
