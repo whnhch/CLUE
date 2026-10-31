@@ -175,6 +175,34 @@ code { font-family: var(--mono); font-size: 0.85em; }
   touch-action: none;
 }
 .flow-viewport.is-panning { cursor: grabbing; }
+
+/* Zoom in / out / fit, bottom-right of each graph. */
+.flow-controls {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.flow-controls button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  background: #fff;
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.flow-controls button:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
 .flow-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .flow-edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .flow-edges path.is-animated {

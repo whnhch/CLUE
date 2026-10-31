@@ -18,7 +18,11 @@ const TRANSFORMATION_EDGE_COLOR = "#94A3B8";
 const SVG_NS = "http://www.w3.org/2000/svg";
 export const STATIC_URL = "/static";
 
-// == Stage: pannable surface scaled to fit its panel (streamlit_flow fit_view, pan_on_drag)
+// == Stage: pannable, zoomable surface scaled to fit its panel (streamlit_flow fit_view, pan_on_drag, zoom controls)
+
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 2;
+const ZOOM_STEP = 1.2;
 
 function createStage(container, height) {
   container.innerHTML = "";
@@ -46,7 +50,63 @@ function createStage(container, height) {
   viewport.append(stage);
   container.append(viewport);
   enablePan(viewport, stage);
+  enableWheelZoom(viewport, stage);
   return { viewport, stage, svg };
+}
+
+function setTransform(stage, x, y, scale) {
+  stage.dataset.x = x;
+  stage.dataset.y = y;
+  stage.dataset.scale = scale;
+  stage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+}
+
+// Zooms by `factor`, keeping the viewport point (cx, cy) fixed; defaults to the centre.
+function zoomBy(viewport, stage, factor, cx = viewport.clientWidth / 2, cy = viewport.clientHeight / 2) {
+  const scale = Number(stage.dataset.scale || 1);
+  const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+  const ratio = next / scale;
+  const x = cx - (cx - Number(stage.dataset.x || 0)) * ratio;
+  const y = cy - (cy - Number(stage.dataset.y || 0)) * ratio;
+  setTransform(stage, x, y, next);
+}
+
+function enableWheelZoom(viewport, stage) {
+  viewport.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      // Trackpad pinch arrives as ctrl+wheel with small deltas.
+      const speed = event.ctrlKey ? 0.01 : 0.002;
+      const rect = viewport.getBoundingClientRect();
+      zoomBy(viewport, stage, Math.exp(-event.deltaY * speed),
+        event.clientX - rect.left, event.clientY - rect.top);
+    },
+    { passive: false }
+  );
+}
+
+const FIT_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none"
+    stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/>
+  </svg>`;
+
+// Zoom in / zoom out / fit buttons in the viewport corner (React Flow <Controls>).
+function addControls(viewport, stage, bounds) {
+  const controls = document.createElement("div");
+  controls.className = "flow-controls";
+  controls.innerHTML = `
+    <button type="button" data-zoom="in" aria-label="Zoom in" data-tooltip="Zoom in">+</button>
+    <button type="button" data-zoom="out" aria-label="Zoom out" data-tooltip="Zoom out">−</button>
+    <button type="button" data-zoom="fit" aria-label="Fit to view" data-tooltip="Fit to view">${FIT_ICON}</button>`;
+  controls.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-zoom]");
+    if (!button) return;
+    const action = button.dataset.zoom;
+    if (action === "fit") fit(viewport, stage, bounds);
+    else zoomBy(viewport, stage, action === "in" ? ZOOM_STEP : 1 / ZOOM_STEP);
+  });
+  viewport.append(controls);
 }
 
 // Scales and centres the drawing in its panel, never above 1:1.
@@ -61,16 +121,13 @@ function fit(viewport, stage, bounds, padding = 0.1) {
   );
   const x = (available.width - width * scale) / 2 - bounds.left * scale;
   const y = (available.height - height * scale) / 2 - bounds.top * scale;
-  stage.dataset.x = x;
-  stage.dataset.y = y;
-  stage.dataset.scale = scale;
-  stage.style.transform = `translate(${x}px, ${y}px) scale(${scale})`;
+  setTransform(stage, x, y, scale);
 }
 
 function enablePan(viewport, stage) {
   let start = null;
   viewport.addEventListener("pointerdown", (event) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || event.target.closest(".flow-controls")) return;
     start = {
       x: event.clientX, y: event.clientY,
       ox: Number(stage.dataset.x || 0), oy: Number(stage.dataset.y || 0),
@@ -87,10 +144,7 @@ function enablePan(viewport, stage) {
       viewport.setPointerCapture(start.id);
       viewport.classList.add("is-panning");
     }
-    stage.dataset.x = start.ox + dx;
-    stage.dataset.y = start.oy + dy;
-    stage.style.transform =
-      `translate(${start.ox + dx}px, ${start.oy + dy}px) scale(${stage.dataset.scale})`;
+    setTransform(stage, start.ox + dx, start.oy + dy, stage.dataset.scale);
   });
   const end = () => {
     if (start?.moved) {
@@ -322,6 +376,7 @@ function renderMetricTree(container, { mode, height, highlighted, values = {}, d
   sizeSvg(svg, bounds);
   fit(viewport, stage, bounds);
   refitOnResize(viewport, stage, bounds);
+  addControls(viewport, stage, bounds);
 }
 
 export function renderProvenanceGraph(container, { highlighted, values, onSelect }) {
@@ -458,6 +513,7 @@ export function renderTransformationGraph(container, leafId, cohortLabel) {
   viewport.style.height = `${Math.round(Math.min(540, Math.max(300, wanted)))}px`;
   fit(viewport, stage, bounds);
   refitOnResize(viewport, stage, bounds);
+  addControls(viewport, stage, bounds);
 }
 
 // == Legends · graph_styles.py · legend_style_html(), transformation_legend_style_html()
