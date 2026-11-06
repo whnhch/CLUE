@@ -14,12 +14,15 @@ import {
   money,
   monthLabel,
   ordinal,
+  parseMonth,
   percent,
   periodLabel,
   raw,
   renderFatal,
   safeDivide,
 } from "./common.js";
+import { installTaskPanel } from "./task-panel.js";
+import { siteTabsHtml } from "./site-nav.js";
 
 // == Study condition · study/session.py: ?s= token picks the condition; unknown or missing = baseline. Dev tokens only.
 
@@ -252,9 +255,16 @@ function renderFilters() {
   from.innerHTML = options;
   to.innerHTML = options;
 
+  // ?start/?end, when present and in the data, win over the defaults: CLUE's
+  // Dashboard tab links back with the period the participant had chosen.
   const has = (month) => state.months.includes(month);
-  state.start = has(DEFAULT_START) ? DEFAULT_START : state.months[0];
-  state.end = has(DEFAULT_END) ? DEFAULT_END : state.months[state.months.length - 1];
+  const params = new URLSearchParams(location.search);
+  const fromUrl = (name) => {
+    const month = parseMonth(params.get(name));
+    return has(month) ? month : null;
+  };
+  state.start = fromUrl("start") ?? (has(DEFAULT_START) ? DEFAULT_START : state.months[0]);
+  state.end = fromUrl("end") ?? (has(DEFAULT_END) ? DEFAULT_END : state.months[state.months.length - 1]);
   from.value = state.start;
   to.value = state.end;
 
@@ -262,10 +272,20 @@ function renderFilters() {
     state.start = from.value;
     state.end = to.value;
     state.pickedLeft = state.pickedRight = null;
+    rememberPeriod();
     update();
   };
   from.addEventListener("change", onChange);
   to.addEventListener("change", onChange);
+}
+
+// Keeps the chosen period in the address bar (replaceState: no history entry
+// per change), so the browser's back button from CLUE restores it too.
+function rememberPeriod() {
+  const url = new URL(location.href);
+  url.searchParams.set("start", state.start);
+  url.searchParams.set("end", state.end);
+  history.replaceState(history.state, "", url);
 }
 
 // Returns [start, end]; swaps a reversed range and shows a warning.
@@ -319,10 +339,11 @@ function clueUrl(metrics) {
 
 function menuHtml(metricId, metrics) {
   // "Open in CLUE": CLUE condition only, mapped metrics only (clue.py · clue_url_for).
+  // Same tab, not a new one: CLUE's Dashboard tab (and the back button) bring the
+  // participant back here, so a second dashboard tab would only get in the way.
   const clue =
     state.session.clueEnabled && METRICS[metricId].clueMetric
-      ? html`<a class="bd-menu-item" href="${clueUrl(metrics)}" target="_blank"
-               rel="noopener">Open in CLUE ↗</a>`
+      ? html`<a class="bd-menu-item" href="${clueUrl(metrics)}">Open in CLUE</a>`
       : "";
   return html`
     <div class="bd-menu">
@@ -750,11 +771,31 @@ function reportChecks(metrics) {
     : "";
 }
 
+// Site tabs (site-nav.js) beside the title: CLUE condition only. In the baseline
+// there is no CLUE, and tabs leading to it would be a way in. Redrawn on every
+// update so the CLUE links carry the period currently selected.
+function renderSiteTabs(metrics) {
+  if (!state.session.clueEnabled || !METRICS[PRIMARY_ID].clueMetric) return;
+  // By element, not only by id: a browser holding an older cached index.html
+  // (header without the id) would otherwise throw here and stop update() from
+  // drawing the rest of the page.
+  const header = document.getElementById("bd-header") ?? document.querySelector(".bd-page > header");
+  if (!header) return;
+  header.classList.add("bd-header", "has-tabs");
+  header.querySelector(".site-tabs")?.remove();
+  const clue = clueUrl(metrics);
+  header.insertAdjacentHTML(
+    "beforeend",
+    String(siteTabsHtml("dashboard", { dashboard: "#", main: clue, simulator: `${clue}#simulator` }))
+  );
+}
+
 function update() {
   const [start, end] = cohortRange();
   const metrics = compute(state.table, start, end);
   state.metrics = metrics;
 
+  renderSiteTabs(metrics);
   reportChecks(metrics);
   renderCards(metrics);
   renderCharts(metrics);
@@ -766,6 +807,9 @@ function update() {
 }
 
 async function main() {
+  // Both conditions, identically, and before the data loads so the task is
+  // readable even if the data is not.
+  installTaskPanel();
   try {
     const data = await loadCohorts();
     state.table = data.months.map(derive);

@@ -405,6 +405,28 @@ select:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible
 }
 .fatal h2 { margin-top: 0; }
 
+/* Site tabs (site-nav.css), CLUE condition only ------------------------------ */
+
+/* Title and subtitle on the left, tabs beside them, pulled down onto the
+   header's bottom rule as in CLUE. Without tabs (baseline) the header is
+   unchanged. */
+.bd-header.has-tabs {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 2rem;
+  align-items: end;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.bd-header.has-tabs .bd-title,
+.bd-header.has-tabs .bd-subtitle { grid-column: 1; }
+.bd-header.has-tabs .site-tabs {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: end;
+  margin-bottom: -1rem;
+}
+
 /* Narrow screens ------------------------------------------------------------ */
 
 @media (max-width: 1100px) {
@@ -413,6 +435,9 @@ select:focus-visible, input:focus-visible, button:focus-visible, a:focus-visible
 @media (max-width: 900px) {
   .bd-page { padding: 1.5rem 16px 3rem; }
   .bd-title { font-size: 2.1rem; }
+  /* Tabs full width under the title. */
+  .bd-header.has-tabs { grid-template-columns: 1fr; }
+  .bd-header.has-tabs .site-tabs { grid-column: 1; grid-row: 3; margin-top: 0.75rem; }
   .bd-filter { grid-template-columns: 1fr; gap: 0.75rem; }
   .bd-charts { grid-template-columns: 1fr; }
   .bd-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }

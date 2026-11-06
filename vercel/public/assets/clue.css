@@ -17,6 +17,17 @@
   --missed-text: #C97A10;
   --missed-bg: #FCE4C6;
   --text: #31333F;
+  /* "Best observed" (generated) vs pinned (the participant's) scenario rows.
+     A light tint and a left edge, not a strong fill: it is a starting point drawn
+     from history, not a recommendation. The blue stays apart from the navy and
+     lavender of the selected state. */
+  --reference-bg: #EEF5FD;
+  --reference-border: #BFD5F0;
+  --reference-accent: #3F7FCF;
+  --reference-tag-bg: #D9E8FA;
+  --reference-tag-text: #1F5A9E;
+  --pinned-tag-bg: #F0F2F6;
+  --pinned-tag-text: #5B6472;
   --font: "Source Sans 3", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -69,10 +80,18 @@ code { font-family: var(--mono); font-size: 0.85em; }
 
 .clue-top {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto auto 1fr;
   align-items: end;
-  gap: 1.5rem;
+  gap: 1.75rem;
   padding: 1.25rem 0 1rem;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 1rem;
+}
+
+/* Site tabs (site-nav.css) beside the title, pulled down onto the bottom rule. */
+.clue-top .site-tabs {
+  align-self: stretch;
+  margin-bottom: -1rem;
 }
 .clue-top h1 {
   margin: 0;
@@ -83,6 +102,7 @@ code { font-family: var(--mono); font-size: 0.85em; }
   color: var(--text);
 }
 .clue-top-metric {
+  justify-self: end;
   margin: 0;
   padding-bottom: 0.4rem;
   font-size: 1.05rem;
@@ -411,9 +431,10 @@ code { font-family: var(--mono); font-size: 0.85em; }
   font-weight: 600;
   color: var(--accent-ink);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Wraps rather than truncating: with the task panel open on a laptop screen,
+     "$42,283 → $56,314" was cut to "$42,283 → $42…", hiding the figure that
+     matters. */
+  overflow-wrap: anywhere;
 }
 .clue-strip-action { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .clue-card-label {
@@ -458,6 +479,31 @@ code { font-family: var(--mono); font-size: 0.85em; }
   background: var(--header-bg);
   box-shadow: 0 2px 8px rgba(44, 55, 112, 0.16);
 }
+/* Keeps its tint and left edge when selected: the navy border and shadow already
+   say "selected", and losing the tint would make it look like a pinned row. */
+.clue-lite.is-reference {
+  background: var(--reference-bg);
+  border-color: var(--reference-border);
+  border-left: 4px solid var(--reference-accent);
+}
+.clue-lite.is-reference.is-selected {
+  border-color: var(--accent);
+  border-left: 4px solid var(--reference-accent);
+  background: var(--reference-bg);
+}
+.clue-lite-tag {
+  display: inline-block;
+  margin-bottom: 3px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+.clue-lite-tag.reference { background: var(--reference-tag-bg); color: var(--reference-tag-text); }
+.clue-lite-tag.pinned { background: var(--pinned-tag-bg); color: var(--pinned-tag-text); }
 .clue-lite-select {
   position: absolute;
   inset: 0;
@@ -573,10 +619,11 @@ code { font-family: var(--mono); font-size: 0.85em; }
 }
 @media (max-width: 700px) {
   .clue-page { padding: 4px 16px 48px; }
-  .clue-top { grid-template-columns: 1fr auto; gap: 0.25rem 1rem; }
+  /* Title and metric on one line, the tabs full width under them. */
+  .clue-top { grid-template-columns: auto 1fr; gap: 0.25rem 1rem; }
   .clue-top h1 { font-size: 2.1rem; }
-  .clue-top-metric { grid-row: 2; grid-column: 1 / -1; padding: 0; }
-  .clue-top .clue-button { grid-row: 1; grid-column: 2; align-self: center; }
+  .clue-top-metric { padding: 0 0 0.3rem; text-align: right; }
+  .clue-top .site-tabs { grid-row: 2; grid-column: 1 / -1; }
   .clue-controls-row { grid-template-columns: 1fr; }
   .clue-control h6 { min-height: 0; }
   .clue-strip-stats { grid-template-columns: repeat(2, 1fr); }

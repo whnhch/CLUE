@@ -63,7 +63,7 @@ Paths in the last column are relative to `baseline_dashboard/`.
 | ▲/▼ change line | `dashboard.js` · `deltaHtml()`, `formatDelta()` | `components/kpi_cards.py` · `_delta_html()`, `_format_delta()` |
 | ⋯ card menu | `dashboard.js` · `menuHtml()`, `wireMenus()` | `components/kpi_cards.py` · `_render_menu()` |
 | Selected-card outline | `assets/dashboard.css` · `.bd-kpi.is-selected` | `components/styles.py` · `highlight_selected_card()` |
-| Open in CLUE ↗ link | `dashboard.js` · `clueUrl()` | `clue.py` · `clue_url_for()` |
+| Open in CLUE link | `dashboard.js` · `clueUrl()` | `clue.py` · `clue_url_for()` (differs here: same tab, see below) |
 | Condition from `?s=` | `dashboard.js` · `resolveSession()` | `study/session.py` · `lookup()`, `resolve_session()` |
 | Two column charts | `dashboard.js` · `chartSpec()`, `renderChart()` | `components/charts.py` · `_column_chart()` |
 | Chart click → selected month | `dashboard.js` · `pickedMonth()` | `components/charts.py` · `_selected_month()` |
@@ -88,14 +88,14 @@ Paths in the last column are relative to `demo/`.
 
 | Element | Here (`public/`) | Original |
 |---|---|---|
-| View switch (main ↔ simulator) | `assets/clue.js` · `render()`, `topBar()` | `main.py`; `components/top_view.py` |
+| View switch (main ↔ simulator) | `assets/clue.js` · `render()`, `topBar()`, `VIEWS` | `main.py`; `components/top_view.py` (differs here: tabs, see below) |
 | Reference period from the link | `assets/clue-model.js` · `referencePeriod()` | `data/metrics.py` · `reference_period()` |
 | Historical baseline | `clue-model.js` · `computeBaseline()` | `data/metrics.py` · `compute_baseline()` |
 | Future cohort size | `clue-model.js` · `futureAcquiredUsers()` | `data/metrics.py` · `_future_acquired_users()` |
 | Fallback example (no data) | `clue-model.js` · `fallbackBaseline()` | `data/metrics.py` · `_fallback_baseline()` |
 | Consistency checks | `clue-model.js` · `failedChecks()` | `data/metrics.py` · `run_checks()` |
 | Metric Overview chart | `clue.js` · `overviewChartSpec()` | `components/main_view.py` · `_build_chart_vega_spec()` |
-| AI-Generated Explanation | `clue.js` · `renderMainView()` | `components/main_view.py` · `_render_ai_explanation()` |
+| Metric Explanation panel | `clue.js` · `renderMainView()` | `components/main_view.py` · `_render_ai_explanation()` (titled "AI-Generated Explanation" there; renamed here because the text is fixed, not generated) |
 | Provenance nodes and edges | `clue-model.js` · `NODES`, `EDGES`, `LEAF_IDS` | `data/graph_data.py` |
 | Provenance graph | `assets/clue-graphs.js` · `renderProvenanceGraph()` | `components/provenance_graph.py`; `utils/graph_builders.py` |
 | Path highlight | `clue-model.js` · `ancestorsOf()` | `utils/graph_utils.py` · `ancestors_of()` |
@@ -125,7 +125,20 @@ Participant tokens and logging are deliberately left out. Publishing
 `sessions.json` on a public site would reveal every assignment, and Vercel has
 no disk to append logs to. Run study sessions on the Streamlit apps.
 
+## Only on Vercel
+
+These have no counterpart in the Streamlit apps.
+
+| Element | Here (`public/`) | Notes |
+|---|---|---|
+| Study task panel (both pages) | `assets/task-panel.js` · `installTaskPanel()`; `assets/task-panel.css` | Collapsible right sidebar, the same in both conditions. Open/closed and the current task carry across pages via `localStorage`, and the task stays in sync between the dashboard and CLUE tabs. |
+| Task instructions text | `assets/study-tasks.js` · `STUDY_TASKS` | The only copy of the wording. Currently a **draft**; replace it with the playbook text. Keep it condition-neutral. |
+| Site tabs (both pages) | `assets/site-nav.js` · `siteTabsHtml()`; `assets/site-nav.css`; placed by `clue.js` · `topBar()`, `dashboardUrl()` and `dashboard.js` · `renderSiteTabs()` | "Dashboard", "Metric Explanation" and "Metric Simulator" tabs beside each page's title, replacing CLUE's single switch button. On the dashboard they appear in the CLUE condition only. CLUE's own views are hash links (`#`, `#simulator`), so switching never reloads and the back button moves between them. Links between pages carry `?start/?end` and `?s`. |
+| Dashboard ↔ CLUE in one tab | `dashboard.js` · `menuHtml()`, `renderFilters()`, `rememberPeriod()` | "Open in CLUE" opens in the same tab (the Streamlit app opens a new one). The dashboard reads `?start/?end` on load and keeps them in the URL as the filter changes, so both the Dashboard tab and the browser's back button return to the chosen period. |
+| "Best observed" vs pinned rows | `clue.js` · `ROW_TAGS`, `rowKind()`, `scenarioListHtml()`; `clue.css` · `.clue-lite.is-reference`, `.clue-lite-tag` | Blue tint, left edge and an "Auto-generated" tag for the generated row; a "Pinned by you" tag on the participant's. |
+
 ## Changing things
 
 Change the Python first, then the matching row above. If a metric's
-definition changes, re-run the build and the export.
+definition changes, re-run the build and the export. The rows under
+**Only on Vercel** are edited here directly.
