@@ -478,6 +478,9 @@ def _snap_to_sliders(baseline: BaselineMetrics, suggestion: RepairSuggestion,
     movable = [f for f in FACTORS if not _is_kept(suggestion, f, values[f])]
     if not movable:
         return suggestion
+    for f in FACTORS:                        # kept: exactly the slider value
+        if f not in movable:
+            values[f] = suggestion.targets[f][0]
 
     def on_grid(f, x, how=round):
         step, top = grid[f]
