@@ -9,6 +9,7 @@ from .styles import (
 )
 from .top_view import PRIMARY_METRIC, render_top_view
 from .simulation_result_graph import render_simulation_graph
+from .strategy_repair import render_strategy_repair
 from data.metrics import (
     count,
     decimal,
@@ -713,4 +714,5 @@ def render_simulator_view() -> None:
     st.markdown(scenario_rail_css(), unsafe_allow_html=True)
 
     _render_controls_row(baseline)
+    render_strategy_repair(baseline)
     _render_comparison_and_results(baseline)

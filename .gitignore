@@ -43,3 +43,5 @@ baseline_dashboard/data/
 baseline_dashboard/study/sessions.json
 baseline_dashboard/logs/
 .claude/
+
+license.txt
